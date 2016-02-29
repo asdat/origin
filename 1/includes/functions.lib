@@ -1,0 +1,103 @@
+<?php
+
+// функция загрузки меню
+function loadMenu($page, $menu){
+	// массив нашего меню, в будущем будет взят из базы данных
+        $menu_head = [
+            ['title'=>'Головна', 'link'=>'/'],
+            ['title'=>'Про нас', 'link'=>'?page=about'],
+            ['title'=>'Підписка', 'link'=>'?page=subscription'],
+            ['title'=>'Контакти', 'link'=>'/?page=contact']
+            ];
+        $menu_category = [
+            ['title'=>'Політика', 'link'=>'/?page=politics'],
+            ['title'=>'Економіка', 'link'=>'/?page=economy'],
+            ['title'=>'Події', 'link'=>'/?page=incidents'],
+            ['title'=>'Спорт', 'link'=>'/?page=sport']
+        ];
+	return $menu;
+}
+
+// функция загрузки информации о странице
+function loadPage($page){
+	// массив страниц, на данном этапе имеем стативный код
+	// в будущем будем извлекать из специальных шаблонов и наполнять данными из БД
+	$pages=[
+		'404'=>['title'=>'404. Страница не найдена', 'content'=> include_once (THEME_ADDR'.'/pages/404.html);],
+		'contact'=>['title'=>'Контакти', 'content'=> include_once (THEME_ADDR'.'/pages/contact.html);],
+                'single_page'=>['content'=> include_once (THEME_ADDR'.'/pages/single_page.html);],
+                'politics'=>['title'=>'Політика', 'content'=> include_once (THEME_ADDR'.'/pages/politics.html);],
+                'economy'=>['title'=>'Економіка', 'content'=> include_once (THEME_ADDR'.'/pages/economy.html);],
+                'incidents'=>['title'=>'Події', 'content'=> include_once (THEME_ADDR'.'/pages/incidents.html);],
+                'sport'=>['title'=>'Спорт', 'content'=> include_once (THEME_ADDR'.'/pages/sport.html);],
+		'home'=>['title'=>'Головна', 'content'=> include_once (THEME_ADDR'.'/pages/home.html);]
+	];
+	// выводим заголовок в зависимости от страницы, если ничего не задано, то выводим "Главная"
+	// используем сокращенную форму условного оператора и функцию проверки
+	// наличия элемента в массиве in_array($value, $array), возвращает true или false
+	// и функцию получения массива ключей массива array_keys($array), возвращает array
+	// echo in_array($_GET['page'], array_keys($pages)) ? $pages[$_GET['page']]['title'] : 'Главная';
+	// развернутый вариант условия
+	if(in_array($_GET['page'], array_keys($pages))){
+		return $pages[$_GET['page']];
+	}else{
+		return $pages['404'];
+	}
+}
+
+// объявляем функцию вывода меню
+function printMenu($menu, $class){
+	// массив классов для разных уровней иерархии
+        $classes = [0=>'top_nav', 'nav navbar-nav main_nav'];
+        $html = "<ul class=\"{$classes[$class]}\">\n";        
+        foreach ($menu AS $i=>$item) {
+                $html.="<li class='item-$i'><a href='{$item['link']}'>{$item['title']}</a>\n";                  
+                $html.="</li>\n";
+        }
+        $html.= "</ul>";
+        return $html;
+}
+
+// показать отдельный блок
+function showBlock($blockName='', $page=false){
+	$user = getCurrUser();
+	if($blockName) require_once ( THEME_ADDR . ($page?'pages':'blocks') . DIRECTORY_SEPARATOR . $blockName . '.tmpl');
+}
+
+// загрузить всех пользователей
+function getUsers(){
+	$users=[
+		'guest' => ['title'=>'guest', 'level' => 2 ],
+		'test' => ['title'=>'test', 'pass'=>password_hash('789'), 'level'=> 1 ],
+		'admin' => ['title'=>'admin', 'pass'=>password_hash('12345'), 'level'=> 0 ],
+	];
+}
+
+function getCurrUser(){
+	$users = getUsers();
+	return (isset($_COOKIES['user']) && $_COOKIES['user']) ? getUser($_COOKIES['user']):getUser('guest');
+}
+
+// загрузить пользователя
+function getUser($user){
+	// пока случай загрузки по имени
+	if(is_string($user)){
+		$users = getUsers();
+		if(in_array($user, $users)){
+			return $users[$user];
+		}else{
+			return $users['guest'];
+		}
+	}
+}
+
+function showPage(){
+	$blocks=['menu', 'head', 'header', 'footer', 'left', 'beforepage', 'afterpage', 'news'];
+	$page=$_REQUEST['page'];
+	$page=loadPage((strlen($page)<1 || $page=='/')?'home':$page);
+	if(is_array($page['content'])){
+		echo showBlock($page['content']['tmpl'], true);
+	}elseif(is_string($page['content'])){
+		echo $page['content'];
+	}
+}
